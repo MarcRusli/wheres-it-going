@@ -177,7 +177,9 @@ const MapView = () => {
           "icon-image": "arrow-icon",
           "icon-size": 1.7,
           "icon-allow-overlap": true,
-          "icon-rotate": ["+", ["get", "bearing"], 90], // add 90 deg due to arrow sprite pointing to the right instead of up
+          "icon-rotate": ["+", ["get", "bearing"], 90],
+          // add 90 deg due to arrow sprite pointing to the right instead of up
+          // TODO: fix arrows not pointing exactly in the direction of the next point. Arrow spacing is weird as well.
         },
       });
     }
@@ -235,7 +237,7 @@ const MapView = () => {
     <div
       id="map"
       ref={mapContainer}
-      style={{ width: "100%", height: "100vh" }}
+      style={{ width: "100%", height: "80vh", display: "block" }}
     />
   );
 };

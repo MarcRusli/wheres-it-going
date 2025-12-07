@@ -12,7 +12,7 @@ export async function fetchBalloonLocations(): Promise<BalloonTrackPoint[]> {
 
   const track: BalloonTrackPoint[] = snapshots
     .map((snapshot) => {
-      const [lat, lon, alt] = snapshot[0] ?? [null, null, null];
+      const [lat, lon, alt] = snapshot[0] ?? [null, null, null]; // sometimes windborne api gives 404
 
       if (lat == null || lon == null || alt == null) return null;
 
