@@ -1,4 +1,7 @@
-export type BalloonPoint = [number, number, number]; 
-// [latitude, longitude, altitude]
-
-export type BalloonPoints = BalloonPoint[];
+export type BalloonPoint = [number | null, number | null, number | null];
+export type TreasureSnapshot = BalloonPoint[];
+export type BalloonTrackPoint = {
+  lng: number;
+  lat: number;
+  alt: number;
+};

@@ -1,18 +1,16 @@
 import { useEffect, useState } from "react";
 import { fetchBalloonLocations } from "../api/treasure";
-import type { BalloonPoint } from "../types/balloon";
+import type { BalloonTrackPoint } from "../types/balloon";
 
 export function useTreasure() {
-  const [data, setData] = useState<BalloonPoint[] | null>(null);
+  const [balloonPoints, setBalloonPoints] = useState<BalloonTrackPoint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBalloonLocations()
-      .then(setData)
-      .catch((err) => setError(err.message))
+      .then(setBalloonPoints)
       .finally(() => setLoading(false));
   }, []);
 
-  return { data, loading, error };
+  return { balloonPoints, loading };
 }
