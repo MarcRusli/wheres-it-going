@@ -18,18 +18,29 @@ const MapView = () => {
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
 
-    mapRef.current = new maplibregl.Map({
+    const map = new maplibregl.Map({
       container: mapContainer.current,
       style: "https://demotiles.maplibre.org/style.json",
       center: [0, 0],
       zoom: 2,
     });
 
-    mapRef.current.addControl(new maplibregl.NavigationControl(), "top-right");
+    map.addControl(new maplibregl.NavigationControl(), "top-right");
 
-    mapRef.current.on("load", () => {
-      console.log("map should've loaded here");
+    mapRef.current = map;
+
+    map.on("load", async () => {
+      console.log("map loaded!");
       setMapLoaded(true);
+
+      try {
+        const resp = await map.loadImage("/map-arrow-right.png");
+        if (resp && resp.data && !map.hasImage("arrow-icon")) {
+          map.addImage("arrow-icon", resp.data, { pixelRatio: 2 });
+        }
+      } catch (err) {
+        console.error("Failed to load local arrow image", err);
+      }
     });
 
     return () => {
@@ -53,10 +64,31 @@ const MapView = () => {
       return;
     }
     console.log("passed!");
-    // ✅ Build GeoJSON with altitude in properties
+
+    function computeBearing(
+      lng1: number,
+      lat1: number,
+      lng2: number,
+      lat2: number
+    ) {
+      const toRad = (d: number) => (d * Math.PI) / 180;
+      const toDeg = (r: number) => (r * 180) / Math.PI;
+
+      const dLng = toRad(lng2 - lng1);
+      const lat1Rad = toRad(lat1);
+      const lat2Rad = toRad(lat2);
+
+      const y = Math.sin(dLng) * Math.cos(lat2Rad);
+      const x =
+        Math.cos(lat1Rad) * Math.sin(lat2Rad) -
+        Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng);
+
+      return (toDeg(Math.atan2(y, x)) + 360) % 360;
+    }
+
     const lineSegmentsGeoJSON: FeatureCollection<
       LineString,
-      { altitude: number }
+      { altitude: number; bearing: number }
     > = {
       type: "FeatureCollection",
       features: balloonPoints.slice(0, -1).map((p, i) => {
@@ -65,7 +97,8 @@ const MapView = () => {
         return {
           type: "Feature",
           properties: {
-            altitude: p.alt, // ✅ use starting point altitude
+            altitude: p.alt,
+            bearing: computeBearing(p.lng, p.lat, next.lng, next.lat),
           },
           geometry: {
             type: "LineString",
@@ -96,7 +129,7 @@ const MapView = () => {
       })),
     };
 
-    // ✅ LINE SOURCE
+    // LINE SOURCE
     if (!map.getSource("altitude-line")) {
       map.addSource("altitude-line", {
         type: "geojson",
@@ -132,7 +165,24 @@ const MapView = () => {
       });
     }
 
-    // ✅ POINT SOURCE
+    // DIRECTIONAL ARROW SOURCE
+    if (!map.getLayer("direction-arrows")) {
+      map.addLayer({
+        id: "direction-arrows",
+        type: "symbol",
+        source: "altitude-line",
+        layout: {
+          "symbol-placement": "line",
+          "symbol-spacing": 80,
+          "icon-image": "arrow-icon",
+          "icon-size": 1.7,
+          "icon-allow-overlap": true,
+          "icon-rotate": ["+", ["get", "bearing"], 90], // add 90 deg due to arrow sprite pointing to the right instead of up
+        },
+      });
+    }
+
+    // POINT SOURCE
     if (!map.getSource("altitude-points")) {
       map.addSource("altitude-points", {
         type: "geojson",
