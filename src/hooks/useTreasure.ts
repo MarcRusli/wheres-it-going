@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { fetchTreasureData, type BalloonPoint } from "../api/treasure";
+import { fetchBalloonLocations } from "../api/treasure";
+import type { BalloonPoint } from "../types/balloon";
 
 export function useTreasure() {
   const [data, setData] = useState<BalloonPoint[] | null>(null);
@@ -7,7 +8,7 @@ export function useTreasure() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchTreasureData()
+    fetchBalloonLocations()
       .then(setData)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));

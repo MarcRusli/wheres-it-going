@@ -1,91 +1,68 @@
-/* export const config = {
-  runtime: "edge",
-};
-
-
-export type BalloonPoint = [number, number, number];
-export type TreasureData = BalloonPoint[];
-
-
-let cachedData: TreasureData | null = null;
-let lastFetch = 0;
-
-const CACHE_TTL = 10_000; // 10 seconds
-
-export default async function handler(): Promise<Response> {
-  console.log("starting async handler on /api/treasure.ts");
-  const now = Date.now();
-
-
-  if (cachedData && now - lastFetch < CACHE_TTL) {
-    return new Response(JSON.stringify(cachedData), {
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "public, s-maxage=10",
-      },
-    });
-  }
-
-  const res = await fetch("https://a.windbornesystems.com/treasure/00.json");
-
-  if (!res.ok) {
-    return new Response(JSON.stringify({ error: "Treasure fetch failed" }), {
-      status: 500,
-    });
-  }
-
-  console.log("res:", res);
-
-
-  const data = (await res.json()) as TreasureData;
-
-  cachedData = data;
-  lastFetch = now;
-
-  return new Response(
-    JSON.stringify(data),
-    {
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "public, s-maxage=10",
-      },
-    }
-  );
-}
- */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export type BalloonPoint = [number, number, number];
-export type TreasureData = BalloonPoint[];
+export type TreasureSnapshot = BalloonPoint[];
+export type NullBalloonPoint = [null, null, null];
+export type NullTreasureSnapshot = NullBalloonPoint[];
 
-let cachedData: TreasureData | null = null;
-let lastFetch = 0;
-
-const CACHE_TTL = 10_000;
+function createNullSnapshot(size = 1000): NullTreasureSnapshot {
+  return Array.from({ length: size }, () => [null, null, null]);
+}
 
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
+  const hourParam = req.query.hour ?? "0";
 
-  const now = Date.now();
-  
-  if (cachedData && now - lastFetch < CACHE_TTL) {
-    return res.status(200).json(cachedData);
+  if (Array.isArray(hourParam)) {
+    return res.status(400).json({ error: "Invalid hour param" });
   }
 
-  const response = await fetch(
-    "https://a.windbornesystems.com/treasure/00.json"
-  );
+  const hour = Number(hourParam);
 
-  if (!response.ok) {
+  if (Number.isNaN(hour) || hour < 0 || hour > 23) {
+    return res.status(400).json({ error: "hour must be 0–23" });
+  }
+
+  const hourStr = hour.toString().padStart(2, "0");
+  const upstreamUrl = `https://a.windbornesystems.com/treasure/${hourStr}.json`;
+
+  try {
+    const upstreamRes = await fetch(upstreamUrl);
+
+    // HARD 404 → Substitute with null snapshot
+    if (upstreamRes.status === 404) {
+      console.warn(`Treasure ${hourStr}.json missing → returning null snapshot`);
+
+      const nullData = createNullSnapshot();
+
+      res.setHeader(
+        "Cache-Control",
+        "s-maxage=300, stale-while-revalidate=600"
+      );
+
+      return res.status(200).json(nullData);
+    }
+
+    // Other upstream failure → 502
+    if (!upstreamRes.ok) {
+      return res.status(502).json({
+        error: "Windborne upstream error",
+        status: upstreamRes.status,
+      });
+    }
+
+    const data: TreasureSnapshot = await upstreamRes.json();
+
+    res.setHeader(
+      "Cache-Control",
+      "s-maxage=300, stale-while-revalidate=600"
+    );
+
+    return res.status(200).json(data);
+  } catch (err) {
+    console.error("Treasure fetch failed:", err);
     return res.status(500).json({ error: "Treasure fetch failed" });
   }
-
-  const data = (await response.json()) as TreasureData;
-
-  cachedData = data;
-  lastFetch = now;
-
-  res.status(200).json(data);
 }

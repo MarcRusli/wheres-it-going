@@ -1,11 +1,22 @@
-export type BalloonPoint = [number, number, number];
+import type { BalloonPoint } from "../types/balloon";
 
-export async function fetchTreasureData(): Promise<BalloonPoint[]> {
-  const res = await fetch("/api/treasure");
+export async function fetchBalloonLocations(): Promise<BalloonPoint[]> {
+  // Fetch 00 to 06 in parallel
+  const requests = Array.from({ length: 7 }, (_, i) =>
+    fetch(`/api/treasure?hour=${i}`).then((res) => {
+      if (!res.ok) throw new Error(`Failed hour ${i}`);
+      return res.json() as Promise<BalloonPoint[]>;
+    })
+  );
 
-  if (!res.ok) {
-    throw new Error("Failed to fetch treasure data");
-  }
+  const snapshots = await Promise.all(requests);
 
-  return res.json();
+  // Extract FIRST balloon from each hour
+  const track: BalloonPoint[] = snapshots.map((snapshot) => {
+    const [lat, lon, alt] = snapshot[0];
+    return [lon, lat, alt];
+  });
+
+
+  return track.reverse();
 }
