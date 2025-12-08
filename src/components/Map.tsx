@@ -3,6 +3,7 @@ import maplibregl, { Map } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useTreasure } from "../hooks/useTreasure";
 import type { FeatureCollection, LineString, Point } from "geojson";
+import "./Map.css";
 
 type MapViewProps = {
   balloonId: number;
@@ -12,6 +13,7 @@ const MapView = ({ balloonId }: MapViewProps) => {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const endMarkerRef = useRef<maplibregl.Marker | null>(null);
 
   console.log("MapView rendered");
   const { balloonPoints, loading } = useTreasure(balloonId);
@@ -53,7 +55,7 @@ const MapView = ({ balloonId }: MapViewProps) => {
     };
   }, []);
 
-  // Plot balloons
+  // Plot balloon
   useEffect(() => {
     const map = mapRef.current;
 
@@ -224,6 +226,34 @@ const MapView = ({ balloonId }: MapViewProps) => {
         pointGeoJSON
       );
     }
+
+    // Mark current balloon location
+
+    // Remove previous marker if it exists
+    if (endMarkerRef.current) {
+      endMarkerRef.current.remove();
+      endMarkerRef.current = null;
+    }
+
+    // Create a custom HTML marker so we can label it
+    const el = document.createElement("div");
+    el.className = "balloon-end-marker";
+    el.innerHTML = `
+      <div class="pin-head">${balloonId}</div>
+      <div class="pin-tail"></div>
+    `;
+
+    // Add marker to the map
+    const currentLng = balloonPoints[balloonPoints.length - 1].lng;
+    const currentLat = balloonPoints[balloonPoints.length - 1].lat;
+    const marker = new maplibregl.Marker({
+      element: el,
+      anchor: "bottom",
+    })
+      .setLngLat([currentLng, currentLat])
+      .addTo(map);
+
+    endMarkerRef.current = marker;
 
     // Fit bounds
     const bounds = balloonPoints.reduce(
