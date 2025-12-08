@@ -4,13 +4,17 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { useTreasure } from "../hooks/useTreasure";
 import type { FeatureCollection, LineString, Point } from "geojson";
 
-const MapView = () => {
+type MapViewProps = {
+  balloonId: number;
+};
+
+const MapView = ({ balloonId }: MapViewProps) => {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
 
   console.log("MapView rendered");
-  const { balloonPoints, loading } = useTreasure();
+  const { balloonPoints, loading } = useTreasure(balloonId);
   console.log(balloonPoints);
   console.log("loading?", loading); // do somehting with this loading thing at some point
 
@@ -63,7 +67,7 @@ const MapView = () => {
       }
       return;
     }
-    console.log("passed!");
+    console.log("balloonId:", balloonId);
 
     function computeBearing(
       lng1: number,
@@ -231,7 +235,7 @@ const MapView = () => {
     );
 
     map.fitBounds(bounds, { padding: 80 });
-  }, [balloonPoints, mapLoaded]);
+  }, [balloonPoints, mapLoaded, balloonId]);
 
   return (
     <div

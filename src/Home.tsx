@@ -1,6 +1,10 @@
 import MapView from "./components/Map";
+import BalloonSelector from "./components/BalloonSelector";
+import { useState } from "react";
 
 const Home = () => {
+  const [selectedBalloonId, setSelectedBalloonId] = useState(0);
+
   return (
     <div className="page">
       <header className="header">
@@ -24,7 +28,11 @@ const Home = () => {
             Open-Meteo.
           </a>
         </p>
-        <MapView />
+        <BalloonSelector
+          value={selectedBalloonId}
+          onChange={setSelectedBalloonId}
+        />
+        <MapView balloonId={selectedBalloonId} />
       </main>
 
       <footer className="footer">
