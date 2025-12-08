@@ -71,7 +71,7 @@ const MapView = ({ balloonId }: MapViewProps) => {
     }
     console.log("balloonId:", balloonId);
 
-    function computeBearing(
+    /* function computeBearing(
       lng1: number,
       lat1: number,
       lng2: number,
@@ -89,12 +89,18 @@ const MapView = ({ balloonId }: MapViewProps) => {
         Math.cos(lat1Rad) * Math.sin(lat2Rad) -
         Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng);
 
-      return (toDeg(Math.atan2(y, x)) + 360) % 360;
-    }
+      const bearing = (toDeg(Math.atan2(y, x)) + 360) % 360;
+      console.log(`computing:
+        lng1=${lng1}, lat1=${lat1}
+        lng2=${lng2}, lat2=${lat2}
+        bearing=${bearing} deg`
+      )
+      return 0;
+    } */
 
     const lineSegmentsGeoJSON: FeatureCollection<
       LineString,
-      { altitude: number; bearing: number }
+      { altitude: number } //; bearing: number }
     > = {
       type: "FeatureCollection",
       features: balloonPoints.slice(0, -1).map((p, i) => {
@@ -104,7 +110,7 @@ const MapView = ({ balloonId }: MapViewProps) => {
           type: "Feature",
           properties: {
             altitude: p.alt,
-            bearing: computeBearing(p.lng, p.lat, next.lng, next.lat),
+            // bearing: computeBearing(p.lng, p.lat, next.lng, next.lat),
           },
           geometry: {
             type: "LineString",
@@ -183,9 +189,6 @@ const MapView = ({ balloonId }: MapViewProps) => {
           "icon-image": "arrow-icon",
           "icon-size": 1.7,
           "icon-allow-overlap": true,
-          "icon-rotate": ["+", ["get", "bearing"], 90],
-          // add 90 deg due to arrow sprite pointing to the right instead of up
-          // TODO: fix arrows not pointing exactly in the direction of the next point. Arrow spacing is weird as well.
         },
       });
     }
