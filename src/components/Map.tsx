@@ -167,11 +167,11 @@ const MapView = ({ balloonId }: MapViewProps) => {
             ["linear"],
             ["get", "altitude"],
             0,
-            ["rgb", 0, 128, 255],
+            ["rgb", 255, 80, 80],
             10,
             ["rgb", 0, 200, 100],
             20,
-            ["rgb", 255, 80, 80],
+            ["rgb", 0, 128, 255],
           ],
         },
       });
@@ -213,11 +213,11 @@ const MapView = ({ balloonId }: MapViewProps) => {
             ["linear"],
             ["get", "altitude"],
             0,
-            ["rgb", 0, 128, 255], // low alt = blue
+            ["rgb", 255, 80, 80], // low alt = red
             10,
             ["rgb", 0, 200, 100], // mid alt = green
             20,
-            ["rgb", 255, 80, 80], // high alt = red
+            ["rgb", 0, 128, 255], // high alt = blue
           ],
 
           "circle-stroke-width": 1,
