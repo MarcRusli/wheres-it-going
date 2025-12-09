@@ -18,11 +18,11 @@ const Home = () => {
       </header>
       <main className="main">
         <p className="description">
-          The map below compares the path of one of{" "}
+          The map below compares the path of{" "}
           <a href="https://windbornesystems.com/" target="_blank">
             WindBorne
           </a>
-          's sounding balloons to a predicted path based on publicly available
+          's sounding balloons to predicted paths based on publicly available
           wind data from{" "}
           <a href="https://open-meteo.com/" target="_blank">
             Open-Meteo.

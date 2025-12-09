@@ -3,6 +3,7 @@ import maplibregl, { Map } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useTreasure } from "../hooks/useTreasure";
 import type { FeatureCollection, LineString, Point } from "geojson";
+import type { LngLatLike } from "maplibre-gl";
 import "./Map.css";
 
 type MapViewProps = {
@@ -17,7 +18,7 @@ const MapView = ({ balloonId }: MapViewProps) => {
 
   console.log("MapView rendered");
   const { balloonPoints, loading } = useTreasure(balloonId);
-  console.log(balloonPoints);
+  console.log("balloonPoints:", balloonPoints);
   console.log("loading?", loading); // do somehting with this loading thing at some point
 
   // Init map once
@@ -69,7 +70,6 @@ const MapView = ({ balloonId }: MapViewProps) => {
       }
       return;
     }
-    console.log("balloonId:", balloonId);
 
     /* function computeBearing(
       lng1: number,
@@ -123,16 +123,40 @@ const MapView = ({ balloonId }: MapViewProps) => {
       }),
     };
 
-    const pointGeoJSON: FeatureCollection<
-      Point,
-      { hour: number; altitude: number }
-    > = {
+    //
+    function getSnapshotTimestamp(index: number, totalPoints: number) {
+      const now = new Date();
+      const latestIndex = totalPoints - 1;
+
+      // How far from the end this point is
+      const age = latestIndex - index;
+
+      // Latest point → exact current time
+      if (age === 0) {
+        return now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      }
+
+      // Round current time down to nearest hour for the second-most recent point
+      const rounded = new Date(now);
+      rounded.setMinutes(0, 0, 0);
+
+      // Example:
+      // age = 1 → rounded
+      // age = 2 → rounded - 1 hour
+      // age = 3 → rounded - 2 hours, ...
+      const ts = new Date(rounded.getTime() - (age - 1) * 60 * 60 * 1000);
+      return ts.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    }
+
+    const pointGeoJSON: FeatureCollection<Point, { altitude: number }> = {
       type: "FeatureCollection",
       features: balloonPoints.map((p, i) => ({
         type: "Feature",
         properties: {
-          hour: i,
+          lat: p.lat,
+          lng: p.lng,
           altitude: p.alt,
+          timestamp: getSnapshotTimestamp(i, balloonPoints.length),
         },
         geometry: {
           type: "Point",
@@ -194,16 +218,16 @@ const MapView = ({ balloonId }: MapViewProps) => {
     }
 
     // POINT SOURCE
-    if (!map.getSource("altitude-points")) {
-      map.addSource("altitude-points", {
+    if (!map.getSource("balloon-points")) {
+      map.addSource("balloon-points", {
         type: "geojson",
         data: pointGeoJSON,
       });
 
       map.addLayer({
-        id: "altitude-points-layer",
+        id: "balloon-points-layer",
         type: "circle",
-        source: "altitude-points",
+        source: "balloon-points",
         paint: {
           "circle-radius": 6,
 
@@ -225,10 +249,40 @@ const MapView = ({ balloonId }: MapViewProps) => {
         },
       });
     } else {
-      (map.getSource("altitude-points") as maplibregl.GeoJSONSource).setData(
+      (map.getSource("balloon-points") as maplibregl.GeoJSONSource).setData(
         pointGeoJSON
       );
     }
+
+    const popup = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+    });
+
+    map.on("mouseenter", "balloon-points-layer", (e) => {
+      map.getCanvas().style.cursor = "pointer";
+
+      const feature = e.features?.[0];
+      if (!feature) return;
+
+      const { lat, lng, altitude, timestamp } = feature.properties;
+      const lngLat: LngLatLike = [lng, lat];
+      const html = `
+        <div style="font-size: 13px;">
+          <strong>Time:</strong> ${timestamp}<br/>
+          <strong>Latitude:</strong> ${parseFloat(lat).toFixed(4)}<br/>
+          <strong>Longitude:</strong> ${parseFloat(lng).toFixed(4)}<br/>
+          <strong>Altitude:</strong> ${altitude.toFixed(2)} km
+        </div>
+      `;
+
+      popup.setLngLat(lngLat).setHTML(html).addTo(map);
+    });
+
+    map.on("mouseleave", "balloon-points-layer", () => {
+      map.getCanvas().style.cursor = "";
+      popup.remove();
+    });
 
     // Mark current balloon location
 
