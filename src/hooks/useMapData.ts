@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchBalloonLocations } from "../api/treasure";
+import { fetchBalloonLocations } from "../api/windBorne";
 import type {
   BalloonTrackPoint,
   CoordinateSet,
@@ -22,9 +22,6 @@ export function useMapData(balloonId: number, timeSpan: number) {
       // First fetch real balloon path data
       const windBorneData = await fetchBalloonLocations(balloonId, timeSpan);
       setBalloonPoints(windBorneData);
-      console.log("balloon points right after fetch:", windBorneData);
-
-      // TEST STUFF
 
       // Generate wind grid coordinates
       const windGridCoords = generateGridFromPath(windBorneData, 5, 1);
@@ -37,13 +34,11 @@ export function useMapData(balloonId: number, timeSpan: number) {
         start,
         end
       );
-      console.log("fetchWindVectors result:", windGridVectors);
 
       setWindPoints(windGridCoords);
       setWindVectors(windGridVectors);
 
       setPredictedPoints([]);
-      console.log("now it is", new Date().toISOString().substring(0, 16));
 
       // Build predicted balloon path based on starting point
       //const predicted = await buildPredictedPath(windBorneData[0]);

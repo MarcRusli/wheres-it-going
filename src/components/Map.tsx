@@ -17,15 +17,12 @@ const MapView = ({ balloonId, pressure }: MapViewProps) => {
   const [mapLoaded, setMapLoaded] = useState(false);
   const endMarkerRef = useRef<maplibregl.Marker | null>(null);
 
-  console.log("MapView rendered");
   // TODO: implement way to adjust time span instead of hardcoding 5 hrs
   const TIME_SPAN = 5;
-  const { balloonPoints, windPoints, windVectors, loading } = useMapData(
+  const { balloonPoints, windPoints, windVectors } = useMapData(
     balloonId,
     TIME_SPAN
   );
-  console.log("balloonPoints:", balloonPoints);
-  console.log("loading?", loading); // do somehting with this loading thing at some point
 
   // Init map once
   useEffect(() => {
@@ -43,7 +40,6 @@ const MapView = ({ balloonId, pressure }: MapViewProps) => {
     mapRef.current = map;
 
     map.on("load", async () => {
-      console.log("map loaded!");
       setMapLoaded(true);
 
       try {
@@ -67,46 +63,12 @@ const MapView = ({ balloonId, pressure }: MapViewProps) => {
     const map = mapRef.current;
 
     if (!map || !mapLoaded || balloonPoints.length === 0) {
-      if (!map) {
-        console.log("no map");
-      } else if (!mapLoaded) {
-        console.log("no mapLoaded");
-      } else if (balloonPoints.length === 0) {
-        console.log("no balloon points");
-      }
       return;
     }
 
-    /* function computeBearing(
-      lng1: number,
-      lat1: number,
-      lng2: number,
-      lat2: number
-    ) {
-      const toRad = (d: number) => (d * Math.PI) / 180;
-      const toDeg = (r: number) => (r * 180) / Math.PI;
-
-      const dLng = toRad(lng2 - lng1);
-      const lat1Rad = toRad(lat1);
-      const lat2Rad = toRad(lat2);
-
-      const y = Math.sin(dLng) * Math.cos(lat2Rad);
-      const x =
-        Math.cos(lat1Rad) * Math.sin(lat2Rad) -
-        Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng);
-
-      const bearing = (toDeg(Math.atan2(y, x)) + 360) % 360;
-      console.log(`computing:
-        lng1=${lng1}, lat1=${lat1}
-        lng2=${lng2}, lat2=${lat2}
-        bearing=${bearing} deg`
-      )
-      return 0;
-    } */
-
     const lineSegmentsGeoJSON: FeatureCollection<
       LineString,
-      { altitude: number } //; bearing: number }
+      { altitude: number }
     > = {
       type: "FeatureCollection",
       features: balloonPoints.slice(0, -1).map((p, i) => {
@@ -199,17 +161,11 @@ const MapView = ({ balloonId, pressure }: MapViewProps) => {
       pressure: number,
       timeIndex: number
     ) {
-      console.log("buildWindVectorGrid:", windVectors);
       if (windVectors.length === 0) {
-        console.log("returning []");
         return [];
       }
-      console.log("building windVectorGrid...");
       return windVectors.map((vec) => {
         const obj = vec as Record<string, number[] | number>;
-        console.log("map vec:", vec);
-        console.log("lat:", vec.lat);
-        console.log("lng:", vec.lng);
         const u = (obj[`wind_u_component_${pressure}hPa`] as number[])[timeIndex];
         const v = (obj[`wind_v_component_${pressure}hPa`] as number[])[timeIndex];
         return {
@@ -221,7 +177,6 @@ const MapView = ({ balloonId, pressure }: MapViewProps) => {
       });
     }
 
-    console.log("pressure:", pressure)
     const windVectorGrid = buildWindVectorGrid(windVectors, pressure, 0);
 
     const windVectorGeoJson: FeatureCollection<LineString> = {
@@ -285,6 +240,7 @@ const MapView = ({ balloonId, pressure }: MapViewProps) => {
           "symbol-spacing": 20,
           "icon-image": "arrow-icon",
           "icon-size": 1.5,
+          "icon-allow-overlap": true,
         },
       });
     }
@@ -392,7 +348,7 @@ const MapView = ({ balloonId, pressure }: MapViewProps) => {
       const { lat, lng, altitude, timestamp } = feature.properties;
       const lngLat: LngLatLike = [lng, lat];
       const html = `
-        <div style="font-size: 13px;">
+        <div style="font-size: 13px; color: black">
           <strong>Time:</strong> ${timestamp}<br/>
           <strong>Latitude:</strong> ${parseFloat(lat).toFixed(4)}<br/>
           <strong>Longitude:</strong> ${parseFloat(lng).toFixed(4)}<br/>
