@@ -110,6 +110,10 @@ const Home = () => {
                   around the balloon’s path.
                 </li>
                 <li>
+                  The app currently only plots the last 5-6 hours of balloon
+                  data.
+                </li>
+                <li>
                   WindBorne tracks hundreds of balloons.{" "}
                   <span className="text-[#abc8cc] font-medium">
                     Click on the balloon selector
@@ -263,7 +267,9 @@ const Home = () => {
 
             {/* Content */}
             <div className="flex-1 space-y-4 text-[#ccc] leading-relaxed">
-              <h2 className="text-lg font-semibold text-[#aaa]">Future Things</h2>
+              <h2 className="text-lg font-semibold text-[#aaa]">
+                Future Things
+              </h2>
 
               {/* Bugs Section */}
               <div>
@@ -272,18 +278,20 @@ const Home = () => {
                 </h3>
                 <ul className="list-disc list-inside space-y-1 text-[#ccc]/90">
                   <li>
-                    Balloon paths that cross the antimeridian take the long way around the world instead
+                    Balloon paths that cross the antimeridian take the long way
+                    around the world instead
                   </li>
                 </ul>
               </div>
 
               {/* TODO Section */}
               <div>
-                <h3 className="text-sm font-medium text-[#bbb] mb-2">
-                  TODO
-                </h3>
+                <h3 className="text-sm font-medium text-[#bbb] mb-2">TODO</h3>
                 <ul className="list-disc list-inside space-y-1 text-[#ccc]/90">
-                  <li>Create a slider or something to view wind data at different times</li>
+                  <li>
+                    Create a slider or something to view wind data at different
+                    times
+                  </li>
                 </ul>
               </div>
             </div>
