@@ -8,9 +8,10 @@ import "./Map.css";
 
 type MapViewProps = {
   balloonId: number;
+  pressure: number;
 };
 
-const MapView = ({ balloonId }: MapViewProps) => {
+const MapView = ({ balloonId, pressure }: MapViewProps) => {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -194,7 +195,7 @@ const MapView = ({ balloonId }: MapViewProps) => {
     }
 
     function buildWindVectorGrid(
-      windVectors: Record<string, any>[],
+      windVectors: Record<string, unknown>[],
       pressure: number,
       timeIndex: number
     ) {
@@ -205,23 +206,24 @@ const MapView = ({ balloonId }: MapViewProps) => {
       }
       console.log("building windVectorGrid...");
       return windVectors.map((vec) => {
+        const obj = vec as Record<string, number[] | number>;
         console.log("map vec:", vec);
         console.log("lat:", vec.lat);
         console.log("lng:", vec.lng);
-        console.log("u:", vec[`wind_u_component_${pressure}hPa`][timeIndex]);
-        console.log("v:", vec[`wind_v_component_${pressure}hPa`][timeIndex]);
+        const u = (obj[`wind_u_component_${pressure}hPa`] as number[])[timeIndex];
+        const v = (obj[`wind_v_component_${pressure}hPa`] as number[])[timeIndex];
         return {
-          lat: vec.lat,
-          lng: vec.lng,
-          u: vec[`wind_u_component_${pressure}hPa`][timeIndex],
-          v: vec[`wind_v_component_${pressure}hPa`][timeIndex],
+          lat: obj.lat as number,
+          lng: obj.lng as number,
+          u,
+          v,
         };
       });
     }
 
-    const pressure = 50;
+    console.log("pressure:", pressure)
     const windVectorGrid = buildWindVectorGrid(windVectors, pressure, 0);
-    console.log("windVectorGrid:", windVectorGrid);
+
     const windVectorGeoJson: FeatureCollection<LineString> = {
       type: "FeatureCollection",
       features: windVectorGrid.map((g) => {
@@ -444,7 +446,7 @@ const MapView = ({ balloonId }: MapViewProps) => {
     );
 
     map.fitBounds(bounds, { padding: 80 });
-  }, [balloonPoints, windPoints, windVectors, mapLoaded, balloonId]);
+  }, [balloonPoints, windPoints, windVectors, mapLoaded, balloonId, pressure]);
 
   return (
     <div

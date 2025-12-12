@@ -16,5 +16,7 @@ export type CoordinateSet = {
   lng: number;
 };
 export interface WeatherData {
-  [key: string]: any;
-}
+  lat: number;
+  lng: number;
+  [key: string]: number[] | number | unknown;
+};

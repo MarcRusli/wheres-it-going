@@ -6,31 +6,12 @@ import type {
 } from "../types/balloon";
 import { fetchWindVectors } from "../api/openMeteo";
 import { generateGridFromPath } from "../utils/grid";
-
-// DON'T DELETE UNTIL new hook works!
-/* export function useBalloonPathFetch(balloonId: number, timeSpan: number) {
-  const [balloonPoints, setBalloonPoints] = useState<BalloonTrackPoint[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadData() {
-      await fetchBalloonLocations(balloonId, timeSpan)
-        .then(setBalloonPoints)
-        .then(() => console.log("balloon points right after fetch:"))
-        .finally(() => setLoading(false));
-
-      console.log("asdf. this is supposed to happen after setballoonpoints and setlaoding to false")
-    }
-    loadData();
-  }, [balloonId, timeSpan]);
-
-  return { balloonPoints, loading };
-} */
+import { getStartEndTimes } from "../utils/time";
 
 export function useMapData(balloonId: number, timeSpan: number) {
   const [balloonPoints, setBalloonPoints] = useState<BalloonTrackPoint[]>([]);
   const [windPoints, setWindPoints] = useState<CoordinateSet[]>([]);
-  const [windVectors, setWindVectors] = useState<object[]>([]);
+  const [windVectors, setWindVectors] = useState<Record<string, unknown>[]>([]);
   const [predictedPoints, setPredictedPoints] = useState<BalloonTrackPoint[]>(
     []
   );
@@ -47,12 +28,14 @@ export function useMapData(balloonId: number, timeSpan: number) {
 
       // Generate wind grid coordinates
       const windGridCoords = generateGridFromPath(windBorneData, 5, 1);
-
+      
+      // Get timespan for wind data
+      const { start, end } = getStartEndTimes(timeSpan);
       // Fetch wind components at each coordinate
       const windGridVectors = await fetchWindVectors(
         windGridCoords,
-        new Date("2025-12-11T10:00"),
-        new Date("2025-12-11T14:00")
+        start,
+        end
       );
       console.log("fetchWindVectors result:", windGridVectors);
 

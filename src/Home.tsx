@@ -1,9 +1,11 @@
 import MapView from "./components/Map";
 import BalloonSelector from "./components/BalloonSelector";
 import { useState } from "react";
+import SearchablePressureDropdown from "./components/PressureSelector";
 
 const Home = () => {
   const [selectedBalloonId, setSelectedBalloonId] = useState(0);
+  const [pressure, setPressure] = useState<number>(1000);
 
   return (
     <div className="page">
@@ -32,7 +34,11 @@ const Home = () => {
           value={selectedBalloonId}
           onChange={setSelectedBalloonId}
         />
-        <MapView balloonId={selectedBalloonId} />
+        <SearchablePressureDropdown
+          selected={pressure}
+          onSelect={(p) => setPressure(p)}
+        />
+        <MapView balloonId={selectedBalloonId} pressure={pressure} />
       </main>
 
       <footer className="footer">
