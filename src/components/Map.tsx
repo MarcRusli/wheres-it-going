@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import maplibregl, { Map } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { useTreasure } from "../hooks/useTreasure";
+import { useMapData } from "../hooks/useMapData";
 import type { FeatureCollection, LineString, Point } from "geojson";
 import type { LngLatLike } from "maplibre-gl";
 import "./Map.css";
@@ -17,7 +17,12 @@ const MapView = ({ balloonId }: MapViewProps) => {
   const endMarkerRef = useRef<maplibregl.Marker | null>(null);
 
   console.log("MapView rendered");
-  const { balloonPoints, loading } = useTreasure(balloonId);
+  // TODO: implement way to adjust time span instead of hardcoding 5 hrs
+  const TIME_SPAN = 5;
+  const { balloonPoints, windPoints, windVectors, loading } = useMapData(
+    balloonId,
+    TIME_SPAN
+  );
   console.log("balloonPoints:", balloonPoints);
   console.log("loading?", loading); // do somehting with this loading thing at some point
 
@@ -123,17 +128,23 @@ const MapView = ({ balloonId }: MapViewProps) => {
       }),
     };
 
-    //
-    function getSnapshotTimestamp(index: number, totalPoints: number) {
+    // Calculates timestamp based on point's position in data array
+    // Latest point → exact current time, but only if we have all data points (sometimes we have one less)
+    // 00.json (latest time stamp) returns 404 for some amount of time after the hour mark passes
+    // TODO: (THIS MIGHT BE UNFIXABLE UNTIL WINDBORNE PUTS TIMESTAMPS ON THEIR DATA)
+    // TODO: fix edge case where say it's 12:03 now, but 00.json still reads 11:00's data.
+    function getSnapshotTimestamp(index: number) {
       const now = new Date();
-      const latestIndex = totalPoints - 1;
+      const latestIndex = TIME_SPAN + 1;
 
       // How far from the end this point is
       const age = latestIndex - index;
 
-      // Latest point → exact current time
       if (age === 0) {
-        return now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+        return now.toLocaleTimeString([], {
+          hour: "numeric",
+          minute: "2-digit",
+        });
       }
 
       // Round current time down to nearest hour for the second-most recent point
@@ -156,7 +167,7 @@ const MapView = ({ balloonId }: MapViewProps) => {
           lat: p.lat,
           lng: p.lng,
           altitude: p.alt,
-          timestamp: getSnapshotTimestamp(i, balloonPoints.length),
+          timestamp: getSnapshotTimestamp(i),
         },
         geometry: {
           type: "Point",
@@ -164,6 +175,117 @@ const MapView = ({ balloonId }: MapViewProps) => {
         },
       })),
     };
+
+    function offsetKmToLatLon(
+      lat: number,
+      lng: number,
+      dxKm: number,
+      dyKm: number
+    ) {
+      const R = 6371; // km
+      const dLat = (dyKm / R) * (180 / Math.PI);
+      const dLng =
+        (dxKm / (R * Math.cos((lat * Math.PI) / 180))) * (180 / Math.PI);
+
+      return {
+        lat: lat + dLat,
+        lng: lng + dLng,
+      };
+    }
+
+    function buildWindVectorGrid(
+      windVectors: Record<string, any>[],
+      pressure: number,
+      timeIndex: number
+    ) {
+      console.log("buildWindVectorGrid:", windVectors);
+      if (windVectors.length === 0) {
+        console.log("returning []");
+        return [];
+      }
+      console.log("building windVectorGrid...");
+      return windVectors.map((vec) => {
+        console.log("map vec:", vec);
+        console.log("lat:", vec.lat);
+        console.log("lng:", vec.lng);
+        console.log("u:", vec[`wind_u_component_${pressure}hPa`][timeIndex]);
+        console.log("v:", vec[`wind_v_component_${pressure}hPa`][timeIndex]);
+        return {
+          lat: vec.lat,
+          lng: vec.lng,
+          u: vec[`wind_u_component_${pressure}hPa`][timeIndex],
+          v: vec[`wind_v_component_${pressure}hPa`][timeIndex],
+        };
+      });
+    }
+
+    const pressure = 50;
+    const windVectorGrid = buildWindVectorGrid(windVectors, pressure, 0);
+    console.log("windVectorGrid:", windVectorGrid);
+    const windVectorGeoJson: FeatureCollection<LineString> = {
+      type: "FeatureCollection",
+      features: windVectorGrid.map((g) => {
+        const tip = offsetKmToLatLon(g.lat, g.lng, g.u, g.v);
+
+        return {
+          type: "Feature",
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [g.lng, g.lat], // start
+              [tip.lng, tip.lat], // end
+            ],
+          },
+          properties: {
+            magnitude: Math.sqrt(g.u * g.u + g.v * g.v),
+          },
+        };
+      }),
+    };
+
+    if (!map.getSource("wind-vectors")) {
+      map.addSource("wind-vectors", {
+        type: "geojson",
+        data: windVectorGeoJson,
+      });
+    } else {
+      const src = map.getSource("wind-vectors") as maplibregl.GeoJSONSource;
+      src.setData(windVectorGeoJson);
+    }
+    if (!map.getLayer("wind-vectors-layer")) {
+      map.addLayer({
+        id: "wind-vectors-layer",
+        type: "line",
+        source: "wind-vectors",
+        paint: {
+          "line-color": "#d7191c",
+          "line-width": [
+            "interpolate",
+            ["linear"],
+            ["get", "magnitude"],
+            0,
+            1,
+            50,
+            5,
+          ],
+        },
+      });
+    }
+
+    // wind arrow layer
+    if (!map.getLayer("wind-direction-arrows")) {
+      map.addLayer({
+        id: "wind-direction-arrows",
+        type: "symbol",
+        source: "wind-vectors",
+        layout: {
+          "symbol-placement": "line",
+          "symbol-spacing": 20,
+          "icon-image": "arrow-icon",
+          "icon-size": 1.5,
+        },
+      });
+    }
 
     // LINE SOURCE
     if (!map.getSource("altitude-line")) {
@@ -322,7 +444,7 @@ const MapView = ({ balloonId }: MapViewProps) => {
     );
 
     map.fitBounds(bounds, { padding: 80 });
-  }, [balloonPoints, mapLoaded, balloonId]);
+  }, [balloonPoints, windPoints, windVectors, mapLoaded, balloonId]);
 
   return (
     <div

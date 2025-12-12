@@ -5,3 +5,16 @@ export type BalloonTrackPoint = {
   lat: number;
   alt: number;
 };
+export type WindVector = {
+  lat: number;
+  lng: number;
+  u: number;
+  v: number;
+};
+export type CoordinateSet = {
+  lat: number;
+  lng: number;
+};
+export interface WeatherData {
+  [key: string]: any;
+}
