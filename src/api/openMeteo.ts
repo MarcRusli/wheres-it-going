@@ -1,5 +1,6 @@
 import { fetchWeatherApi } from "openmeteo";
 import type { CoordinateSet, WeatherData } from "../types/balloon";
+import type { ApiError } from "../components/OpenMeteoStatusBanner";
 
 export async function fetchWindVectors(
   positions: CoordinateSet[],
@@ -33,7 +34,22 @@ export async function fetchWindVectors(
     end_hour: endTime.toISOString().substring(0, 16),
   };
   const url = "https://api.open-meteo.com/v1/forecast";
-  const responses = await fetchWeatherApi(url, params);
+
+  let responses;
+  try {
+    responses = await fetchWeatherApi(url, params);
+  } catch (err: unknown) {
+    let message = "Failed to fetch wind data from Open-Meteo";
+
+    if (err instanceof Error && typeof err.message === "string") {
+      message = err.message;
+    }
+
+    throw {
+      message,
+      source: "open-meteo",
+    } satisfies ApiError;
+  }
 
   // Process 3 locations
   const data: WeatherData[] = [];

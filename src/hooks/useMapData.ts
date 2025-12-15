@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
 import { fetchBalloonLocations } from "../api/windBorne";
-import type {
-  BalloonTrackPoint,
-  CoordinateSet,
-} from "../types/balloon";
+import type { BalloonTrackPoint, CoordinateSet } from "../types/balloon";
 import { fetchWindVectors } from "../api/openMeteo";
 import { generateGridFromPath } from "../utils/grid";
 import { getStartEndTimes } from "../utils/time";
+import type { ApiError } from "../components/OpenMeteoStatusBanner";
 
-export function useMapData(balloonId: number, timeSpan: number) {
+export function useMapData(balloonId: number, timeSpan: number, setError: React.Dispatch<React.SetStateAction<ApiError | null>>) {
   const [balloonPoints, setBalloonPoints] = useState<BalloonTrackPoint[]>([]);
   const [windPoints, setWindPoints] = useState<CoordinateSet[]>([]);
   const [windVectors, setWindVectors] = useState<Record<string, unknown>[]>([]);
@@ -19,38 +17,55 @@ export function useMapData(balloonId: number, timeSpan: number) {
 
   useEffect(() => {
     async function loadData() {
-      // First fetch real balloon path data
-      const windBorneData = await fetchBalloonLocations(balloonId, timeSpan);
-      setBalloonPoints(windBorneData);
+      try {
+        // First fetch real balloon path data
+        const windBorneData = await fetchBalloonLocations(balloonId, timeSpan);
+        setBalloonPoints(windBorneData);
 
-      // Generate wind grid coordinates
-      const windGridCoords = generateGridFromPath(windBorneData, 5, 1);
-      
-      // Get timespan for wind data
-      const { start, end } = getStartEndTimes(timeSpan);
-      // Fetch wind components at each coordinate
-      const windGridVectors = await fetchWindVectors(
-        windGridCoords,
-        start,
-        end
-      );
+        // Generate wind grid coordinates
+        const windGridCoords = generateGridFromPath(windBorneData, 5, 1);
 
-      setWindPoints(windGridCoords);
-      setWindVectors(windGridVectors);
+        // Get timespan for wind data
+        const { start, end } = getStartEndTimes(timeSpan);
+        // Fetch wind components at each coordinate
+        const windGridVectors = await fetchWindVectors(
+          windGridCoords,
+          start,
+          end
+        );
 
-      setPredictedPoints([]);
+        setWindPoints(windGridCoords);
+        setWindVectors(windGridVectors);
 
-      // Build predicted balloon path based on starting point
-      //const predicted = await buildPredictedPath(windBorneData[0]);
-      //setPredictedPoints(predicted);
+        setPredictedPoints([]);
 
-      setLoading(false);
+        // Build predicted balloon path based on starting point
+        //const predicted = await buildPredictedPath(windBorneData[0]);
+        //setPredictedPoints(predicted);
+      } catch (error: unknown) {
+        if (typeof error === "object" &&
+            error !== null &&
+            "message" in error &&
+            typeof error.message === "string") {
+          setError(error as ApiError);
+        } else {
+          setError({ message: "Unknown error", source: "network" });
+        }
+      } finally {
+        setLoading(false);
+      }
     }
 
     loadData();
-  }, [balloonId, timeSpan]);
+  }, [balloonId, timeSpan, setError]);
 
-  return { balloonPoints, predictedPoints, windPoints, windVectors, loading };
+  return {
+    balloonPoints,
+    predictedPoints,
+    windPoints,
+    windVectors,
+    loading,
+  };
 }
 
 /* async function buildPredictedPath(startPoint: BalloonTrackPoint) {

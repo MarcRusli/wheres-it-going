@@ -5,13 +5,15 @@ import { useMapData } from "../hooks/useMapData";
 import type { FeatureCollection, LineString, Point } from "geojson";
 import type { LngLatLike } from "maplibre-gl";
 import "./Map.css";
+import type { ApiError } from "./OpenMeteoStatusBanner";
 
 type MapViewProps = {
   balloonId: number;
   pressure: number;
+  setError: React.Dispatch<React.SetStateAction<ApiError | null>>
 };
 
-const MapView = ({ balloonId, pressure }: MapViewProps) => {
+const MapView = ({ balloonId, pressure, setError }: MapViewProps) => {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -21,7 +23,8 @@ const MapView = ({ balloonId, pressure }: MapViewProps) => {
   const TIME_SPAN = 5;
   const { balloonPoints, windPoints, windVectors } = useMapData(
     balloonId,
-    TIME_SPAN
+    TIME_SPAN,
+    setError
   );
 
   // Init map once

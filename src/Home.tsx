@@ -2,10 +2,15 @@ import MapView from "./components/Map";
 import BalloonSelector from "./components/BalloonSelector";
 import { useState } from "react";
 import SearchablePressureDropdown from "./components/PressureSelector";
+import {
+  OpenMeteoStatusBanner,
+  type ApiError,
+} from "./components/OpenMeteoStatusBanner";
 
 const Home = () => {
   const [selectedBalloonId, setSelectedBalloonId] = useState(0);
   const [pressure, setPressure] = useState<number>(1000);
+  const [error, setError] = useState<ApiError | null>(null);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1a2d2c] via-[#284846] to-[#1f3a38] text-[#dae0d3] flex flex-col">
@@ -138,7 +143,7 @@ const Home = () => {
                 </li>
               </ul>
 
-              {/* 🔶 Warning Block */}
+              {/* Warning Block */}
               <div className="mt-4 bg-amber-500/10 border border-amber-500/40 rounded-xl p-4 flex gap-3 shadow-inner">
                 <svg
                   className="w-6 h-6 text-amber-400 flex-shrink-0 mt-1"
@@ -243,8 +248,9 @@ const Home = () => {
         </div>
 
         <div className="bg-[#284846]/40 backdrop-blur-md rounded-2xl border border-[#abc8cc]/20 p-4 shadow-2xl">
+          <OpenMeteoStatusBanner error={error} />
           <div className="map-wrapper rounded-xl overflow-hidden relative z-0">
-            <MapView balloonId={selectedBalloonId} pressure={pressure} />
+            <MapView balloonId={selectedBalloonId} pressure={pressure} setError={setError} />
           </div>
         </div>
 
@@ -291,6 +297,9 @@ const Home = () => {
                   <li>
                     Create a slider or something to view wind data at different
                     times
+                  </li>
+                  <li>
+                    Cache Open-Meteo wind data to help mitigate rate limiting
                   </li>
                 </ul>
               </div>
