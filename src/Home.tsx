@@ -292,8 +292,6 @@ const Home = () => {
           </div>
         </div>
 
-        <div className="bg-[#284846]/40 backdrop-blur-md rounded-2xl border border-[#abc8cc]/20 p-4 shadow-2xl"></div>
-
         {/* Grey Bugs & TODO Panel */}
         <div className="bg-[#1f2a2a]/80 backdrop-blur-md rounded-2xl border border-[#555]/30 p-6 mt-6 shadow-lg">
           <div className="flex items-start gap-4">
