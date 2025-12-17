@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchBalloonLocations } from "../api/windBorne";
-import type { BalloonTrackPoint, CoordinateSet } from "../types/balloon";
+import type { BalloonTrackPoint, CoordinateSet, WeatherData } from "../types/balloon";
 import { fetchWindVectors } from "../api/openMeteo";
 import { generateGridFromPath } from "../utils/grid";
 import { getStartEndTimes } from "../utils/time";
@@ -9,7 +9,7 @@ import type { ApiError } from "../components/OpenMeteoStatusBanner";
 export function useMapData(balloonId: number, timeSpan: number, setError: React.Dispatch<React.SetStateAction<ApiError | null>>) {
   const [balloonPoints, setBalloonPoints] = useState<BalloonTrackPoint[]>([]);
   const [windPoints, setWindPoints] = useState<CoordinateSet[]>([]);
-  const [windVectors, setWindVectors] = useState<Record<string, unknown>[]>([]);
+  const [windVectors, setWindVectors] = useState<WeatherData[]>([]);/* Record<string, number[] | number>[]>([]); */
   const [predictedPoints, setPredictedPoints] = useState<BalloonTrackPoint[]>(
     []
   );

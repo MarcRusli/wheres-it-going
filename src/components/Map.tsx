@@ -3,25 +3,33 @@ import maplibregl, { Map } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useMapData } from "../hooks/useMapData";
 import type { FeatureCollection, LineString, Point } from "geojson";
-import type { LngLatLike } from "maplibre-gl";
 import "./Map.css";
 import type { ApiError } from "./OpenMeteoStatusBanner";
 
 type MapViewProps = {
   balloonId: number;
   pressure: number;
-  setError: React.Dispatch<React.SetStateAction<ApiError | null>>
+  setWindTimes: React.Dispatch<React.SetStateAction<Date[]>>;
+  hourIndex: number;
+  setError: React.Dispatch<React.SetStateAction<ApiError | null>>;
 };
 
-const MapView = ({ balloonId, pressure, setError }: MapViewProps) => {
+const MapView = ({
+  balloonId,
+  pressure,
+  setWindTimes,
+  hourIndex,
+  setError,
+}: MapViewProps) => {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const endMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const popupRef = useRef<maplibregl.Popup | null>(null);
 
   // TODO: implement way to adjust time span instead of hardcoding 5 hrs
   const TIME_SPAN = 5;
-  const { balloonPoints, windPoints, windVectors } = useMapData(
+  const { balloonPoints, windVectors } = useMapData(
     balloonId,
     TIME_SPAN,
     setError
@@ -162,15 +170,19 @@ const MapView = ({ balloonId, pressure, setError }: MapViewProps) => {
     function buildWindVectorGrid(
       windVectors: Record<string, unknown>[],
       pressure: number,
-      timeIndex: number
+      hourIndex: number
     ) {
       if (windVectors.length === 0) {
         return [];
       }
       return windVectors.map((vec) => {
         const obj = vec as Record<string, number[] | number>;
-        const u = (obj[`wind_u_component_${pressure}hPa`] as number[])[timeIndex];
-        const v = (obj[`wind_v_component_${pressure}hPa`] as number[])[timeIndex];
+        const u = (obj[`wind_u_component_${pressure}hPa`] as number[])[
+          hourIndex
+        ];
+        const v = (obj[`wind_v_component_${pressure}hPa`] as number[])[
+          hourIndex
+        ];
         return {
           lat: obj.lat as number,
           lng: obj.lng as number,
@@ -180,7 +192,14 @@ const MapView = ({ balloonId, pressure, setError }: MapViewProps) => {
       });
     }
 
-    const windVectorGrid = buildWindVectorGrid(windVectors, pressure, 0);
+    if (windVectors.length !== 0) {
+      setWindTimes(windVectors[0].time);
+    }
+    const windVectorGrid = buildWindVectorGrid(
+      windVectors,
+      pressure,
+      hourIndex
+    );
 
     const windVectorGeoJson: FeatureCollection<LineString> = {
       type: "FeatureCollection",
@@ -192,8 +211,8 @@ const MapView = ({ balloonId, pressure, setError }: MapViewProps) => {
           geometry: {
             type: "LineString",
             coordinates: [
-              [g.lng, g.lat], // start
-              [tip.lng, tip.lat], // end
+              [g.lng, g.lat],
+              [tip.lng, tip.lat],
             ],
           },
           properties: {
@@ -337,12 +356,52 @@ const MapView = ({ balloonId, pressure, setError }: MapViewProps) => {
       );
     }
 
-    const popup = new maplibregl.Popup({
-      closeButton: false,
-      closeOnClick: false,
-    });
+    if (!popupRef.current) {
+      popupRef.current = new maplibregl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+      });
+    }
 
-    map.on("mouseenter", "balloon-points-layer", (e) => {
+    const popup = popupRef.current;
+
+    const handleMouseEnter = (e: maplibregl.MapLayerMouseEvent) => {
+      map.getCanvas().style.cursor = "pointer";
+
+      const feature = e.features?.[0];
+      if (!feature || !popup) return;
+
+      const props = feature.properties as {
+        lat: number;
+        lng: number;
+        altitude: number;
+        timestamp: string;
+      };
+
+      popup
+        .setLngLat([props.lng, props.lat])
+        .setHTML(
+          `
+        <div style="font-size: 13px; color: black">
+          <strong>Time:</strong> ${props.timestamp}<br/>
+          <strong>Latitude:</strong> ${props.lat.toFixed(4)}<br/>
+          <strong>Longitude:</strong> ${props.lng.toFixed(4)}<br/>
+          <strong>Altitude:</strong> ${props.altitude.toFixed(2)} km
+        </div>
+      `
+        )
+        .addTo(map);
+    };
+
+    const handleMouseLeave = () => {
+      map.getCanvas().style.cursor = "";
+      popup?.remove();
+    };
+
+    map.on("mouseenter", "balloon-points-layer", handleMouseEnter);
+    map.on("mouseleave", "balloon-points-layer", handleMouseLeave);
+
+    /* map.on("mouseenter", "balloon-points-layer", (e) => {
       map.getCanvas().style.cursor = "pointer";
 
       const feature = e.features?.[0];
@@ -365,7 +424,7 @@ const MapView = ({ balloonId, pressure, setError }: MapViewProps) => {
     map.on("mouseleave", "balloon-points-layer", () => {
       map.getCanvas().style.cursor = "";
       popup.remove();
-    });
+    }); */
 
     // Mark current balloon location
 
@@ -405,13 +464,26 @@ const MapView = ({ balloonId, pressure, setError }: MapViewProps) => {
     );
 
     map.fitBounds(bounds, { padding: 80 });
-  }, [balloonPoints, windPoints, windVectors, mapLoaded, balloonId, pressure]);
+
+    return () => {
+      map.off("mouseenter", "balloon-points-layer", handleMouseEnter);
+      map.off("mouseleave", "balloon-points-layer", handleMouseLeave);
+    };
+  }, [
+    balloonPoints,
+    windVectors,
+    mapLoaded,
+    balloonId,
+    pressure,
+    setWindTimes,
+    hourIndex,
+  ]);
 
   return (
     <div
       id="map"
       ref={mapContainer}
-      style={{ width: "100%", height: "80vh", display: "block" }}
+      style={{ width: "100%", height: "70vh", display: "block" }}
     />
   );
 };

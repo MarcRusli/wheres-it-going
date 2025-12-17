@@ -6,10 +6,13 @@ import {
   OpenMeteoStatusBanner,
   type ApiError,
 } from "./components/OpenMeteoStatusBanner";
+import { TimeSlider } from "./components/TimeSlider";
 
 const Home = () => {
   const [selectedBalloonId, setSelectedBalloonId] = useState(0);
   const [pressure, setPressure] = useState<number>(1000);
+  const [windTimes, setWindTimes] = useState<Date[]>([]);
+  const [hourIndex, setHourIndex] = useState<number>(0);
   const [error, setError] = useState<ApiError | null>(null);
 
   return (
@@ -170,12 +173,12 @@ const Home = () => {
           </div>
         </div>
 
-        <div className="bg-[#284846]/40 rounded-2xl border border-[#abc8cc]/20 p-6 mb-6 shadow-2xl">
+        <div className="bg-[#284846]/40 rounded-2xl border border-[#abc8cc]/20 p-6 mb-6 shadow-2xl space-y-6">
           <div className="grid md:grid-cols-2 gap-4">
             {/* Balloon Selector */}
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-medium text-[#abc8cc] mb-1">
-                Select Balloon
+                Balloon
                 {/* Info Icon + Tooltip */}
                 <div className="relative group cursor-pointer">
                   <svg
@@ -211,7 +214,7 @@ const Home = () => {
             {/* Pressure Selector */}
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-medium text-[#abc8cc] mb-1">
-                Pressure Level (hPa)
+                Air Pressure / Altitude
                 {/* Info Icon + Tooltip */}
                 <div className="relative group cursor-pointer">
                   <svg
@@ -244,15 +247,52 @@ const Home = () => {
                 />
               </div>
             </div>
+
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-[#abc8cc] mb-1">
+                Time
+                {/* Info Icon + Tooltip */}
+                <div className="relative group cursor-pointer">
+                  <svg
+                    className="w-4 h-4 text-[#abc8cc]/70 group-hover:text-[#abc8cc] transition-colors"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M13 16h-1v-4h-1m1-4h.01M12 21a9 9 0 110-18 9 9 0 010 18z"
+                    />
+                  </svg>
+
+                  {/* Tooltip */}
+                  <div className="absolute left-1/2 -translate-x-1/2 mt-2 w-48 rounded-lg bg-[#abc8cc] border border-[#dae0d3]/30 text-[#284846] text-xs px-3 py-2 shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50">
+                    Drag or click the slider to see how wind data changes over time.
+                  </div>
+                </div>
+              </label>
+              <TimeSlider
+                windTimes={windTimes}
+                hourIndex={hourIndex}
+                onChange={setHourIndex}
+              />
+            </div>
+          </div>
+          <OpenMeteoStatusBanner error={error} />
+          <div className="map-wrapper rounded-xl overflow-hidden relative z-0">
+            <MapView
+              balloonId={selectedBalloonId}
+              pressure={pressure}
+              setWindTimes={setWindTimes}
+              hourIndex={hourIndex}
+              setError={setError}
+            />
           </div>
         </div>
 
-        <div className="bg-[#284846]/40 backdrop-blur-md rounded-2xl border border-[#abc8cc]/20 p-4 shadow-2xl">
-          <OpenMeteoStatusBanner error={error} />
-          <div className="map-wrapper rounded-xl overflow-hidden relative z-0">
-            <MapView balloonId={selectedBalloonId} pressure={pressure} setError={setError} />
-          </div>
-        </div>
+        <div className="bg-[#284846]/40 backdrop-blur-md rounded-2xl border border-[#abc8cc]/20 p-4 shadow-2xl"></div>
 
         {/* Grey Bugs & TODO Panel */}
         <div className="bg-[#1f2a2a]/80 backdrop-blur-md rounded-2xl border border-[#555]/30 p-6 mt-6 shadow-lg">

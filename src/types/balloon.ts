@@ -18,5 +18,6 @@ export type CoordinateSet = {
 export interface WeatherData {
   lat: number;
   lng: number;
+  time: Date[];
   [key: string]: number[] | number | unknown;
 };
