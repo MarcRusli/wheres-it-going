@@ -333,10 +333,6 @@ const Home = () => {
                 <h3 className="text-sm font-medium text-[#bbb] mb-2">TODO</h3>
                 <ul className="list-disc list-inside space-y-1 text-[#ccc]/90">
                   <li>
-                    Create a slider or something to view wind data at different
-                    times
-                  </li>
-                  <li>
                     Cache Open-Meteo wind data to help mitigate rate limiting
                   </li>
                 </ul>
